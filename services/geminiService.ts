@@ -2,44 +2,71 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, Recipe, Task, TaskType } from '../types';
 
-const getAiClient = () => {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper seguro para recuperar a chave em diferentes ambientes de build (Vite, CRA, Vercel)
+const getApiKey = () => {
+    let key = '';
+    try {
+        // Tenta ler variáveis de ambiente padrão do Node/CRA
+        if (typeof process !== 'undefined' && process.env) {
+            key = process.env.API_KEY || process.env.REACT_APP_API_KEY || process.env.VITE_API_KEY || '';
+        }
+    } catch (e) {}
+
+    // Tenta ler variáveis do Vite (import.meta.env)
+    if (!key) {
+        try {
+            // @ts-ignore
+            if (import.meta && import.meta.env) {
+                // @ts-ignore
+                key = import.meta.env.VITE_API_KEY || '';
+            }
+        } catch (e) {}
+    }
+    return key;
 };
 
 export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks: Task[], recipes: Recipe[], waterGoal: number }> => {
-  const ai = getAiClient();
-  
-  const prompt = `
-    Atue como um nutricionista e personal trainer de elite. Crie um plano diário para:
-    Nome: ${profile.name}
-    Dados: ${profile.age} anos, ${profile.weight}kg, ${profile.height}cm.
-    IMC Atual: ${profile.bmi} (${profile.bmiCategory}).
-    META DE PESO DO USUÁRIO: ${profile.targetWeight}kg. (Nota: O usuário pode ter biotipo largo ou musculoso, respeite essa meta mesmo que o IMC padrão sugira menos).
-    
-    Rotina: Acorda às ${profile.wakeUpTime}, Dorme às ${profile.bedTime}, Trab: ${profile.workSchedule}
-    Nível: ${profile.activityLevel}
-    Objetivo Descritivo: ${profile.goals}
-
-    REQUISITOS OBRIGATÓRIOS:
-    1. Rotina (tasks): Cronológica.
-       - IMPORTANTE: Para TODAS as tarefas do tipo "MEAL", o campo 'description' DEVE conter sugestões específicas do que comer (ex: "Omelete com espinafre e aveia", não apenas "Café da manhã"). A dieta deve ser compatível com a meta de peso (${profile.targetWeight}kg).
-       - OBRIGATÓRIO: Incluir uma tarefa diária para tomar "1 scoop de Creatina" (este é o único suplemento do usuário).
-       - OBRIGATÓRIO: Se o usuário definiu horário de trabalho (${profile.workSchedule}), crie uma tarefa "Iniciar Foco no Trabalho" no início e "Encerrar Expediente" no final.
-       - Inclua horários de água.
-       - Inclua caminhadas leves se sedentário.
-       - Inclua um lembrete: "Abrir App de Treino" em horário estratégico.
-       - Para refeições ("MEAL"), estime as calorias no campo 'calories'.
-    
-    2. Receitas (Marmitas):
-       - Gere entre 5 a 7 receitas de refeições saudáveis (almoço/jantar) que possam ser congeladas (meal prep).
-       - Devem ser práticas, baratas e focadas em reeducação alimentar sem pânico.
-
-    3. Meta de água em ml.
-
-    Retorne JSON puro.
-  `;
-
   try {
+    const apiKey = getApiKey();
+    
+    // Se não tiver chave, lança erro para cair no catch e usar o fallback
+    if (!apiKey) {
+        console.warn("API Key não encontrada. Usando plano offline.");
+        throw new Error("Missing API Key");
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+  
+    const prompt = `
+      Atue como um nutricionista e personal trainer de elite. Crie um plano diário para:
+      Nome: ${profile.name}
+      Dados: ${profile.age} anos, ${profile.weight}kg, ${profile.height}cm.
+      IMC Atual: ${profile.bmi} (${profile.bmiCategory}).
+      META DE PESO DO USUÁRIO: ${profile.targetWeight}kg. (Nota: O usuário pode ter biotipo largo ou musculoso, respeite essa meta mesmo que o IMC padrão sugira menos).
+      
+      Rotina: Acorda às ${profile.wakeUpTime}, Dorme às ${profile.bedTime}, Trab: ${profile.workSchedule}
+      Nível: ${profile.activityLevel}
+      Objetivo Descritivo: ${profile.goals}
+
+      REQUISITOS OBRIGATÓRIOS:
+      1. Rotina (tasks): Cronológica.
+         - IMPORTANTE: Para TODAS as tarefas do tipo "MEAL", o campo 'description' DEVE conter sugestões específicas do que comer (ex: "Omelete com espinafre e aveia", não apenas "Café da manhã"). A dieta deve ser compatível com a meta de peso (${profile.targetWeight}kg).
+         - OBRIGATÓRIO: Incluir uma tarefa diária para tomar "1 scoop de Creatina" (este é o único suplemento do usuário).
+         - OBRIGATÓRIO: Se o usuário definiu horário de trabalho (${profile.workSchedule}), crie uma tarefa "Iniciar Foco no Trabalho" no início e "Encerrar Expediente" no final.
+         - Inclua horários de água.
+         - Inclua caminhadas leves se sedentário.
+         - Inclua um lembrete: "Abrir App de Treino" em horário estratégico.
+         - Para refeições ("MEAL"), estime as calorias no campo 'calories'.
+      
+      2. Receitas (Marmitas):
+         - Gere entre 5 a 7 receitas de refeições saudáveis (almoço/jantar) que possam ser congeladas (meal prep).
+         - Devem ser práticas, baratas e focadas em reeducação alimentar sem pânico.
+
+      3. Meta de água em ml.
+
+      Retorne JSON puro.
+    `;
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -88,6 +115,7 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
 
     if (response.text) {
         let cleanText = response.text.trim();
+        // Limpeza extra de blocos de código Markdown que a IA as vezes envia
         if (cleanText.startsWith('```json')) {
             cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '').trim();
         } else if (cleanText.startsWith('```')) {
@@ -116,32 +144,42 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
     throw new Error("No data returned from AI");
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    // Fallback básico para evitar tela branca
+    console.error("Gemini API Error or Timeout:", error);
+    // PLANO DE BACKUP (FALLBACK)
+    // Isso garante que o usuário consiga usar o app mesmo sem API KEY ou Erro na IA
     return {
         waterGoal: 2500,
         tasks: [
-            { id: '1', time: '07:00', title: 'Café da Manhã', description: 'Ovos mexidos, 1 fatia de pão integral e mamão.', type: TaskType.MEAL, completed: false, xpReward: 30, calories: 350 },
+            { id: '1', time: '07:00', title: 'Café da Manhã', description: 'Ovos mexidos com espinafre e 1 fatia de pão integral.', type: TaskType.MEAL, completed: false, xpReward: 30, calories: 350 },
             { id: '2', time: '07:15', title: 'Suplementação', description: 'Tomar 1 scoop de Creatina com água.', type: TaskType.HABIT, completed: false, xpReward: 10 },
             { id: '3', time: '09:00', title: 'Iniciar Foco no Trabalho', description: 'Organize suas tarefas e inicie o dia produtivo.', type: TaskType.WORK, completed: false, xpReward: 20 },
-            { id: '4', time: '13:00', title: 'Almoço', description: 'Frango grelhado (150g), arroz integral (3 colheres) e salada verde à vontade.', type: TaskType.MEAL, completed: false, xpReward: 40, calories: 500 },
+            { id: '4', time: '10:30', title: 'Hidratação', description: 'Beber 2 copos de água.', type: TaskType.WATER, completed: false, xpReward: 10 },
+            { id: '5', time: '13:00', title: 'Almoço', description: 'Frango grelhado (150g), arroz integral (3 colheres) e salada verde.', type: TaskType.MEAL, completed: false, xpReward: 40, calories: 500 },
+            { id: '6', time: '18:00', title: 'Encerrar Expediente', description: 'Desconecte-se do trabalho. Hora de cuidar de você.', type: TaskType.WORK, completed: false, xpReward: 20 },
+            { id: '7', time: '19:00', title: 'Treino', description: 'Abrir App de Treino e fazer exercícios do dia.', type: TaskType.WORKOUT_APP, completed: false, xpReward: 50 },
         ],
-        recipes: []
+        recipes: [
+            { id: 'r1', name: 'Escondidinho de Batata Doce', description: 'Camadas de purê de batata doce e carne moída magra.', ingredients: ['Batata doce', 'Patinho moído', 'Cebola', 'Alho'], prepTime: '40 min', prepTimeMinutes: 40, calories: 400, isMealPrepFriendly: true },
+            { id: 'r2', name: 'Frango com Legumes Assados', description: 'Cubos de peito de frango assados com brócolis e cenoura.', ingredients: ['Peito de frango', 'Brócolis', 'Cenoura', 'Azeite'], prepTime: '25 min', prepTimeMinutes: 25, calories: 350, isMealPrepFriendly: true }
+        ]
     };
   }
 };
 
 export const generateRecipesOnly = async (profile: UserProfile): Promise<Recipe[]> => {
-    const ai = getAiClient();
-    
-    const prompt = `
-      Crie 6 NOVAS sugestões de receitas de marmitas saudáveis para:
-      Perfil: ${profile.name}, objetivo: ${profile.goals}, Meta Peso: ${profile.targetWeight}kg.
-      Foco: Praticidade, baixo custo e congelamento (Meal Prep).
-      Evite receitas repetitivas.
-    `;
-  
     try {
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("Missing API Key");
+
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const prompt = `
+        Crie 6 NOVAS sugestões de receitas de marmitas saudáveis para:
+        Perfil: ${profile.name}, objetivo: ${profile.goals}, Meta Peso: ${profile.targetWeight}kg.
+        Foco: Praticidade, baixo custo e congelamento (Meal Prep).
+        Evite receitas repetitivas.
+      `;
+    
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
@@ -188,6 +226,6 @@ export const generateRecipesOnly = async (profile: UserProfile): Promise<Recipe[
       return [];
     } catch (e) {
       console.error("Error generating recipes", e);
-      return [];
+      return []; // Retorna vazio silenciosamente em caso de erro
     }
   };
