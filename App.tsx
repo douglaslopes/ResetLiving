@@ -86,6 +86,7 @@ function App() {
         bmiCategory: bmiCategory
       };
 
+      // Se falhar (ex: sem API key), o service retorna o plano de fallback, não lança erro.
       const plan = await generateInitialPlan(completeProfile);
       
       setState(prev => ({
@@ -102,8 +103,9 @@ function App() {
         moodHistory: []
       }));
     } catch (error) {
-      alert("Houve um erro ao gerar seu plano. Tente novamente.");
-      console.error(error);
+      console.error("Erro fatal no onboarding:", error);
+      // Se algo muito grave acontecer, apenas destravamos o loading.
+      // O estado anterior (Onboarding) será mantido, permitindo tentar de novo.
     } finally {
       setIsLoading(false);
     }
@@ -129,8 +131,9 @@ function App() {
         
         alert("Rotina atualizada com sucesso!");
     } catch (error) {
-        alert("Erro ao regenerar rotina. Verifique sua conexão.");
+        // Fallback silencioso ou alerta suave
         console.error(error);
+        alert("Não foi possível conectar com a IA. Tente novamente mais tarde.");
     } finally {
         setIsLoading(false);
     }
@@ -148,7 +151,7 @@ function App() {
               }));
               alert("Novas opções de marmitas geradas!");
           } else {
-              alert("Não foi possível gerar novas receitas no momento.");
+              alert("Modo Offline: Não foi possível gerar novas receitas agora. Verifique a chave de API.");
           }
       } catch(e) {
           console.error(e);
@@ -274,7 +277,7 @@ function App() {
         </div>
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Atualizando Plano...</h2>
-        <p className="text-slate-500 opacity-90 max-w-xs">Nossa IA está criando novas opções para sua rotina.</p>
+        <p className="text-slate-500 opacity-90 max-w-xs">Isso pode levar alguns segundos enquanto a IA prepara tudo...</p>
       </div>
     );
   }
