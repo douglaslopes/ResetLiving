@@ -139,11 +139,11 @@ function App() {
     }
   };
 
-  const handleRegenerateRecipes = async () => {
+  const handleRegenerateRecipes = async (ingredients?: string) => {
       if (!state.profile) return;
       setIsRegeneratingRecipes(true);
       try {
-          const newRecipes = await generateRecipesOnly(state.profile);
+          const newRecipes = await generateRecipesOnly(state.profile, ingredients);
           if (newRecipes.length > 0) {
               setState(prev => ({
                   ...prev,
@@ -287,10 +287,10 @@ function App() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-slate-50 min-h-screen relative shadow-2xl overflow-hidden">
+    <div className="max-w-md mx-auto bg-slate-50 h-screen flex flex-col relative shadow-2xl overflow-hidden">
       
-      {/* Content Area */}
-      <div className="h-full overflow-y-auto no-scrollbar">
+      {/* Content Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
         {currentView === View.DASHBOARD && (
             <Dashboard 
                 state={state} 
@@ -317,11 +317,11 @@ function App() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center z-10">
+      {/* Bottom Navigation - Fixed (flex-none ensures it doesn't shrink) */}
+      <div className="flex-none bg-white border-t border-slate-200 px-6 py-4 flex justify-between items-center z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button 
             onClick={() => setCurrentView(View.DASHBOARD)}
-            className={`flex flex-col items-center gap-1 ${currentView === View.DASHBOARD ? 'text-primary' : 'text-slate-400'}`}
+            className={`flex flex-col items-center gap-1 transition-colors ${currentView === View.DASHBOARD ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
             <LayoutDashboard size={24} />
             <span className="text-[10px] font-bold">Hoje</span>
@@ -331,7 +331,7 @@ function App() {
 
         <button 
             onClick={() => setCurrentView(View.RECIPES)}
-            className={`flex flex-col items-center gap-1 ${currentView === View.RECIPES ? 'text-primary' : 'text-slate-400'}`}
+            className={`flex flex-col items-center gap-1 transition-colors ${currentView === View.RECIPES ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
             <ChefHat size={24} />
             <span className="text-[10px] font-bold">Marmitas</span>
@@ -341,7 +341,7 @@ function App() {
 
         <button 
              onClick={() => setCurrentView(View.PROFILE)}
-            className={`flex flex-col items-center gap-1 ${currentView === View.PROFILE ? 'text-primary' : 'text-slate-400'}`}
+            className={`flex flex-col items-center gap-1 transition-colors ${currentView === View.PROFILE ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
         >
             <UserCircle size={24} />
             <span className="text-[10px] font-bold">Perfil</span>
