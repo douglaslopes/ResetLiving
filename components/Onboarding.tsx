@@ -60,7 +60,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
         </div>
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Criando seu ResetLiving...</h2>
-        <p className="text-slate-500 opacity-90 max-w-xs">Nossa IA está redefinindo sua rotina para sua melhor versão.</p>
+        <p className="text-slate-500 opacity-90 max-w-xs">Isso pode levar alguns segundos. Nossa IA está redefinindo sua rotina para sua melhor versão.</p>
       </div>
     );
   }
