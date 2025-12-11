@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
 import { Recipe } from '../types';
-import { ChefHat, Clock, Flame, Calculator, RefreshCw, Filter } from 'lucide-react';
+import { ChefHat, Clock, Flame, Calculator, RefreshCw, Filter, Refrigerator } from 'lucide-react';
 
 interface RecipesProps {
   recipes: Recipe[];
-  onRegenerateRecipes: () => void;
+  onRegenerateRecipes: (ingredients?: string) => void;
   isRegenerating: boolean;
 }
 
 const Recipes: React.FC<RecipesProps> = ({ recipes, onRegenerateRecipes, isRegenerating }) => {
   const [filter, setFilter] = useState<'ALL' | 'FAST' | 'COMPLEX'>('ALL');
+  const [pantryItems, setPantryItems] = useState('');
 
   const filteredRecipes = recipes.filter(r => {
     if (filter === 'ALL') return true;
@@ -27,6 +28,29 @@ const Recipes: React.FC<RecipesProps> = ({ recipes, onRegenerateRecipes, isRegen
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Marmitas Saudáveis</h1>
         <p className="text-slate-500">Sugestões práticas para sua semana.</p>
+      </div>
+
+      {/* Pantry Input Section */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6">
+         <h3 className="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">
+            <Refrigerator size={16} className="text-primary" />
+            O que tem na geladeira/armário?
+         </h3>
+         <textarea
+            value={pantryItems}
+            onChange={(e) => setPantryItems(e.target.value)}
+            placeholder="Ex: Frango, batata, cenoura, ovos..."
+            className="w-full text-sm p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-primary outline-none resize-none mb-3"
+            rows={2}
+         />
+         <button 
+            onClick={() => onRegenerateRecipes(pantryItems)}
+            disabled={isRegenerating}
+            className="w-full py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+          >
+             <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
+             {isRegenerating ? "Criando sugestões..." : pantryItems ? "Gerar receitas com estes ingredientes" : "Gerar novas sugestões aleatórias"}
+          </button>
       </div>
 
       {/* Calorie Summary Card */}
@@ -120,15 +144,6 @@ const Recipes: React.FC<RecipesProps> = ({ recipes, onRegenerateRecipes, isRegen
           ))
         )}
       </div>
-
-      <button 
-        onClick={onRegenerateRecipes}
-        disabled={isRegenerating}
-        className="w-full mt-6 flex items-center justify-center gap-2 py-3 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-70"
-      >
-         <RefreshCw size={18} className={isRegenerating ? "animate-spin" : ""} />
-         {isRegenerating ? "Criando sugestões..." : "Novas Sugestões de Marmitas"}
-      </button>
     </div>
   );
 };
