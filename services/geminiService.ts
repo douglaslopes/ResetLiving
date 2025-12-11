@@ -40,9 +40,10 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
     const prompt = `
       Atue como um nutricionista e personal trainer de elite. Crie um plano diário para:
       Nome: ${profile.name}
-      Dados: ${profile.age} anos, ${profile.weight}kg, ${profile.height}cm.
+      Dados: ${profile.age} anos, ${profile.weight}kg, ${profile.height}cm, Gênero: ${profile.gender}.
       IMC Atual: ${profile.bmi} (${profile.bmiCategory}).
-      META DE PESO DO USUÁRIO: ${profile.targetWeight}kg. (Nota: O usuário pode ter biotipo largo ou musculoso, respeite essa meta mesmo que o IMC padrão sugira menos).
+      META DE PESO DO USUÁRIO: ${profile.targetWeight}kg. 
+      RESTRIÇÕES ALIMENTARES: ${profile.dietaryRestrictions || "Nenhuma"} (LEVE ISSO MUITO A SÉRIO).
       
       Rotina: Acorda às ${profile.wakeUpTime}, Dorme às ${profile.bedTime}, Trab: ${profile.workSchedule}
       Nível: ${profile.activityLevel}
@@ -50,7 +51,7 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
 
       REQUISITOS OBRIGATÓRIOS:
       1. Rotina (tasks): Cronológica.
-         - IMPORTANTE: Para TODAS as tarefas do tipo "MEAL", o campo 'description' DEVE conter sugestões específicas do que comer (ex: "Omelete com espinafre e aveia", não apenas "Café da manhã"). A dieta deve ser compatível com a meta de peso (${profile.targetWeight}kg).
+         - IMPORTANTE: Para TODAS as tarefas do tipo "MEAL", o campo 'description' DEVE conter sugestões específicas do que comer, respeitando as restrições alimentares.
          - OBRIGATÓRIO: Incluir uma tarefa diária para tomar "1 scoop de Creatina" (este é o único suplemento do usuário).
          - OBRIGATÓRIO: Se o usuário definiu horário de trabalho (${profile.workSchedule}), crie uma tarefa "Iniciar Foco no Trabalho" no início e "Encerrar Expediente" no final.
          - Inclua horários de água.
@@ -60,7 +61,7 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
       
       2. Receitas (Marmitas):
          - Gere entre 5 a 7 receitas de refeições saudáveis (almoço/jantar) que possam ser congeladas (meal prep).
-         - Devem ser práticas, baratas e focadas em reeducação alimentar sem pânico.
+         - DEVEM RESPEITAR: ${profile.dietaryRestrictions || "Nenhuma restrição"}.
 
       3. Meta de água em ml.
 
@@ -146,7 +147,6 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
   } catch (error) {
     console.error("Gemini API Error or Timeout:", error);
     // PLANO DE BACKUP (FALLBACK)
-    // Isso garante que o usuário consiga usar o app mesmo sem API KEY ou Erro na IA
     return {
         waterGoal: 2500,
         tasks: [
@@ -166,18 +166,24 @@ export const generateInitialPlan = async (profile: UserProfile): Promise<{ tasks
   }
 };
 
-export const generateRecipesOnly = async (profile: UserProfile): Promise<Recipe[]> => {
+export const generateRecipesOnly = async (profile: UserProfile, availableIngredients?: string): Promise<Recipe[]> => {
     try {
       const apiKey = getApiKey();
       if (!apiKey) throw new Error("Missing API Key");
 
       const ai = new GoogleGenAI({ apiKey });
       
+      let ingredientText = "";
+      if (availableIngredients && availableIngredients.trim().length > 0) {
+          ingredientText = `O usuário tem estes ingredientes em casa: "${availableIngredients}". PRIORIZE receitas que usem esses itens para evitar desperdício e economizar, mas pode adicionar itens básicos de despensa.`;
+      }
+
       const prompt = `
         Crie 6 NOVAS sugestões de receitas de marmitas saudáveis para:
-        Perfil: ${profile.name}, objetivo: ${profile.goals}, Meta Peso: ${profile.targetWeight}kg.
+        Perfil: ${profile.name}, objetivo: ${profile.goals}.
+        Restrições Alimentares: ${profile.dietaryRestrictions || "Nenhuma"}.
+        ${ingredientText}
         Foco: Praticidade, baixo custo e congelamento (Meal Prep).
-        Evite receitas repetitivas.
       `;
     
       const response = await ai.models.generateContent({
@@ -226,6 +232,6 @@ export const generateRecipesOnly = async (profile: UserProfile): Promise<Recipe[
       return [];
     } catch (e) {
       console.error("Error generating recipes", e);
-      return []; // Retorna vazio silenciosamente em caso de erro
+      return []; 
     }
   };
