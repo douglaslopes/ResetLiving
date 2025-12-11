@@ -2,7 +2,11 @@
 export enum Gender {
   MALE = 'Masculino',
   FEMALE = 'Feminino',
-  OTHER = 'Outro'
+  NON_BINARY = 'Não-binário',
+  FLUID = 'Gênero Fluido',
+  AGENDER = 'Agênero',
+  TRANSGENDER = 'Transgênero',
+  OTHER = 'Outro / Prefiro não dizer'
 }
 
 export enum ActivityLevel {
@@ -51,6 +55,7 @@ export interface UserProfile {
   bmi: number;
   bmiCategory: string;
   gender: Gender;
+  dietaryRestrictions: string; // Allergies, preferences (Vegan, Lactose free, etc)
   wakeUpTime: string; // HH:mm
   bedTime: string; // HH:mm
   workSchedule: string; // e.g., "9:00 - 18:00"
