@@ -16,7 +16,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
     wakeUpTime: '07:00',
     bedTime: '23:00',
     workSchedule: '09:00 - 18:00',
-    goals: 'Emagrecer com saúde e sair do sedentarismo'
+    goals: 'Emagrecer com saúde e sair do sedentarismo',
+    dietaryRestrictions: ''
   });
 
   // Calculate reference range based on height
@@ -78,7 +79,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
           </div>
       </div>
 
-      <div className="w-full max-w-md p-6 mt-4">
+      <div className="w-full max-w-md p-6 mt-4 pb-20">
         
         {/* Progress Bar */}
         <div className="w-full bg-slate-200 h-2 rounded-full mb-8">
@@ -110,7 +111,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Gênero</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Identidade de Gênero</label>
                   <select
                     className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                     value={formData.gender}
@@ -120,6 +121,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
                   </select>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Restrições Alimentares / Alergias</label>
+                <textarea
+                  className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none resize-none placeholder:text-slate-400 text-sm"
+                  rows={2}
+                  placeholder="Ex: Intolerância a lactose, alergia a amendoim, vegano..."
+                  value={formData.dietaryRestrictions || ''}
+                  onChange={(e) => updateField('dietaryRestrictions', e.target.value)}
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Deixe em branco se não tiver restrições.</p>
+              </div>
+
               <button
                 disabled={!formData.name || !formData.age}
                 onClick={handleNext}
