@@ -23,7 +23,14 @@ export enum TaskType {
   WORKOUT_APP = 'WORKOUT_APP',
   SLEEP = 'SLEEP',
   HABIT = 'HABIT',
-  WORK = 'WORK'
+  WORK = 'WORK',
+  COMMUTE = 'COMMUTE' // Novo tipo para deslocamento
+}
+
+export enum WorkMode {
+  REMOTE = 'Home Office',
+  HYBRID = 'Híbrido',
+  ONSITE = 'Presencial'
 }
 
 export enum Mood {
@@ -58,7 +65,11 @@ export interface UserProfile {
   dietaryRestrictions: string; // Allergies, preferences (Vegan, Lactose free, etc)
   wakeUpTime: string; // HH:mm
   bedTime: string; // HH:mm
-  workSchedule: string; // e.g., "9:00 - 18:00"
+  workStartTime: string; // HH:mm start
+  workEndTime: string; // HH:mm end
+  workMode: WorkMode;
+  workDays: number[]; // Array of days (0=Sun, 1=Mon, ..., 6=Sat)
+  commuteTime: number; // Minutes (one way)
   activityLevel: ActivityLevel;
   goals: string;
 }
@@ -100,3 +111,4 @@ export interface AppState {
 }
 
 export const XP_PER_LEVEL = 1000;
+
