@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Task, TaskType, AppState, XP_PER_LEVEL, Mood } from '../types';
-import { CheckCircle, Circle, Droplets, Flame, Trophy, Utensils, Moon, Briefcase, Dumbbell, Smartphone, RefreshCw, Smile, Frown, Meh } from 'lucide-react';
+import { CheckCircle, Circle, Droplets, Flame, Trophy, Utensils, Moon, Briefcase, Dumbbell, Smartphone, RefreshCw, Car, CalendarOff } from 'lucide-react';
 
 interface DashboardProps {
   state: AppState;
@@ -12,11 +12,25 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, onRegeneratePlan, onSetMood }) => {
-  const { dailySchedule, userXP, userLevel, waterIntakeCurrent, waterIntakeGoal, streakDays, moodHistory } = state;
+  const { dailySchedule, userXP, userLevel, waterIntakeCurrent, waterIntakeGoal, streakDays, moodHistory, profile } = state;
 
   const progressToNextLevel = (userXP % XP_PER_LEVEL) / XP_PER_LEVEL * 100;
-  const today = new Date().toISOString().split('T')[0];
-  const todaysMoodEntry = moodHistory.find(m => m.date === today);
+  const todayDate = new Date().toISOString().split('T')[0];
+  const currentDayOfWeek = new Date().getDay(); // 0 = Sunday
+  const todaysMoodEntry = moodHistory.find(m => m.date === todayDate);
+
+  // LOGIC: Filter tasks based on Work Days
+  // If today is NOT in profile.workDays, hide WORK and COMMUTE tasks.
+  const isWorkDay = profile?.workDays?.includes(currentDayOfWeek) ?? true; // Default to true if undefined
+
+  const sortedTasks = [...dailySchedule]
+    .filter(task => {
+        if (!isWorkDay && (task.type === TaskType.WORK || task.type === TaskType.COMMUTE)) {
+            return false;
+        }
+        return true;
+    })
+    .sort((a, b) => a.time.localeCompare(b.time));
 
   const getIcon = (type: TaskType) => {
     switch (type) {
@@ -26,6 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
       case TaskType.WORKOUT_APP: return <Smartphone className="text-purple-600" size={20} />;
       case TaskType.SLEEP: return <Moon className="text-indigo-400" size={20} />;
       case TaskType.WORK: return <Briefcase className="text-slate-700" size={20} />;
+      case TaskType.COMMUTE: return <Car className="text-cyan-600" size={20} />;
       case TaskType.HABIT: return <CheckCircle className="text-slate-500" size={20} />;
       default: return <Circle size={20} />;
     }
@@ -37,12 +52,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
       case TaskType.WORKOUT_APP: return 'bg-purple-50 border-purple-200';
       case TaskType.EXERCISE: return 'bg-red-50 border-red-200';
       case TaskType.WORK: return 'bg-slate-100 border-slate-200';
+      case TaskType.COMMUTE: return 'bg-cyan-50 border-cyan-200';
       default: return 'bg-white border-slate-100';
     }
   };
-
-  // Sort tasks by time
-  const sortedTasks = [...dailySchedule].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <div className="pb-24">
@@ -107,7 +120,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
 
       {/* Timeline */}
       <div className="px-6">
-        <h3 className="font-bold text-slate-900 text-xl mb-4">Rotina de Hoje</h3>
+        <div className="flex justify-between items-end mb-4">
+            <h3 className="font-bold text-slate-900 text-xl">Rotina de Hoje</h3>
+            {!isWorkDay && (
+                <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                    <CalendarOff size={14} />
+                    <span>Dia de Folga</span>
+                </div>
+            )}
+        </div>
+        
         <div className="space-y-4">
           {sortedTasks.length === 0 ? (
             <p className="text-center text-slate-500 py-10">Nenhuma tarefa agendada.</p>
@@ -137,8 +159,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
                       <div className={`p-1.5 rounded-lg ${task.completed ? 'bg-slate-200' : 'bg-white shadow-sm'}`}>
                         {getIcon(task.type)}
                       </div>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${task.type === TaskType.WORKOUT_APP ? 'bg-purple-100 text-purple-700' : task.type === TaskType.WORK ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-600'}`}>
-                         {task.type === TaskType.WORKOUT_APP ? 'APP EXTERNO' : task.type === TaskType.WORK ? 'TRABALHO' : '+' + task.xpReward + ' XP'}
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${task.type === TaskType.WORKOUT_APP ? 'bg-purple-100 text-purple-700' : task.type === TaskType.WORK ? 'bg-slate-200 text-slate-800' : task.type === TaskType.COMMUTE ? 'bg-cyan-100 text-cyan-800' : 'bg-slate-100 text-slate-600'}`}>
+                         {task.type === TaskType.WORKOUT_APP ? 'APP EXTERNO' : task.type === TaskType.WORK ? 'TRABALHO' : task.type === TaskType.COMMUTE ? 'TRAJETO' : '+' + task.xpReward + ' XP'}
                       </span>
                       {task.calories && task.type === TaskType.MEAL && !task.completed && (
                         <span className="text-xs text-orange-500 font-medium flex items-center gap-1">
@@ -179,7 +201,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
              className="w-full flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-600 font-medium rounded-xl hover:bg-slate-200 transition-colors"
            >
               <RefreshCw size={18} />
-              Gerar Nova Rotina
+              Gerar Nova Rotina (Ajustar Horários)
            </button>
            <p className="text-xs text-center text-slate-400 mt-2">Isso manterá seu XP e Histórico, mas mudará os horários e receitas.</p>
         </div>
@@ -190,3 +212,4 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onToggleTask, onAddWater, 
 };
 
 export default Dashboard;
+
