@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Gender, ActivityLevel } from '../types';
-import { Loader2, ArrowRight, Check, Info } from 'lucide-react';
+import { UserProfile, Gender, ActivityLevel, WorkMode } from '../types';
+import { Loader2, ArrowRight, Check, Info, Building2, Home, Car } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
@@ -10,12 +10,18 @@ interface OnboardingProps {
 
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
   const [step, setStep] = useState(1);
+  
+  // Initialize with some default values to avoid controlled/uncontrolled issues
   const [formData, setFormData] = useState<Partial<UserProfile>>({
     gender: Gender.OTHER,
     activityLevel: ActivityLevel.SEDENTARY,
-    wakeUpTime: '07:00',
-    bedTime: '23:00',
-    workSchedule: '09:00 - 18:00',
+    wakeUpTime: '06:30',
+    bedTime: '22:30',
+    workStartTime: '09:00',
+    workEndTime: '18:00',
+    workMode: WorkMode.ONSITE,
+    workDays: [1, 2, 3, 4, 5], // Mon-Fri default
+    commuteTime: 30, // 30 min default
     goals: 'Emagrecer com saúde e sair do sedentarismo',
     dietaryRestrictions: ''
   });
@@ -45,6 +51,25 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const toggleWorkDay = (dayIndex: number) => {
+    const currentDays = formData.workDays || [];
+    if (currentDays.includes(dayIndex)) {
+        updateField('workDays', currentDays.filter(d => d !== dayIndex));
+    } else {
+        updateField('workDays', [...currentDays, dayIndex].sort());
+    }
+  };
+
+  const weekDays = [
+      { id: 0, label: 'D', name: 'Domingo' },
+      { id: 1, label: 'S', name: 'Segunda' },
+      { id: 2, label: 'T', name: 'Terça' },
+      { id: 3, label: 'Q', name: 'Quarta' },
+      { id: 4, label: 'Q', name: 'Quinta' },
+      { id: 5, label: 'S', name: 'Sexta' },
+      { id: 6, label: 'S', name: 'Sábado' },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-white p-6 text-center">
@@ -61,7 +86,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
         </div>
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Criando seu ResetLiving...</h2>
-        <p className="text-slate-500 opacity-90 max-w-xs">Isso pode levar alguns segundos. Nossa IA está redefinindo sua rotina para sua melhor versão.</p>
+        <p className="text-slate-500 opacity-90 max-w-xs">Isso pode levar alguns segundos. Nossa IA está calculando sua logística e nutrição.</p>
       </div>
     );
   }
@@ -223,13 +248,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
 
           {step === 3 && (
             <div className="space-y-4 animate-fade-in">
-              <h2 className="text-xl font-semibold mb-4">Sua Rotina</h2>
+              <h2 className="text-xl font-semibold mb-4">Logística & Trabalho</h2>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Acorda às</label>
                   <input
                     type="time"
-                    className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                     value={formData.wakeUpTime}
                     onChange={(e) => updateField('wakeUpTime', e.target.value)}
                   />
@@ -238,22 +264,97 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">Dorme às</label>
                   <input
                     type="time"
-                    className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                     value={formData.bedTime}
                     onChange={(e) => updateField('bedTime', e.target.value)}
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Horário de Trabalho/Estudo</label>
-                <input
-                  type="text"
-                  className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none placeholder:text-slate-400"
-                  placeholder="ex: 09:00 - 18:00"
-                  value={formData.workSchedule}
-                  onChange={(e) => updateField('workSchedule', e.target.value)}
-                />
+
+              <div className="border-t border-slate-100 pt-4">
+                 <label className="block text-sm font-medium text-slate-700 mb-2">Dias de Trabalho</label>
+                 <div className="flex justify-between gap-1">
+                    {weekDays.map(day => {
+                        const isSelected = (formData.workDays || []).includes(day.id);
+                        return (
+                            <button
+                                key={day.id}
+                                onClick={() => toggleWorkDay(day.id)}
+                                className={`w-9 h-9 rounded-full text-xs font-bold transition-all ${isSelected ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}
+                            >
+                                {day.label}
+                            </button>
+                        )
+                    })}
+                 </div>
+                 <p className="text-[10px] text-slate-400 mt-1 text-center">Selecione os dias que você trabalha</p>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Início Trabalho</label>
+                  <input
+                    type="time"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                    value={formData.workStartTime}
+                    onChange={(e) => updateField('workStartTime', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Fim Trabalho</label>
+                  <input
+                    type="time"
+                    className="w-full p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                    value={formData.workEndTime}
+                    onChange={(e) => updateField('workEndTime', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Modalidade</label>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => updateField('workMode', WorkMode.ONSITE)}
+                        className={`flex-1 p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 ${formData.workMode === WorkMode.ONSITE ? 'border-primary bg-primary/10 text-primary' : 'border-slate-200 text-slate-500'}`}
+                    >
+                        <Building2 size={16} />
+                        Presencial
+                    </button>
+                    <button 
+                         onClick={() => updateField('workMode', WorkMode.HYBRID)}
+                         className={`flex-1 p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 ${formData.workMode === WorkMode.HYBRID ? 'border-primary bg-primary/10 text-primary' : 'border-slate-200 text-slate-500'}`}
+                    >
+                        <Car size={16} />
+                        Híbrido
+                    </button>
+                    <button 
+                         onClick={() => updateField('workMode', WorkMode.REMOTE)}
+                         className={`flex-1 p-2 rounded-lg border text-xs font-medium flex flex-col items-center gap-1 ${formData.workMode === WorkMode.REMOTE ? 'border-primary bg-primary/10 text-primary' : 'border-slate-200 text-slate-500'}`}
+                    >
+                        <Home size={16} />
+                        Home Office
+                    </button>
+                </div>
+              </div>
+
+              {formData.workMode !== WorkMode.REMOTE && (
+                  <div className="animate-fade-in">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tempo de Deslocamento (apenas ida)</label>
+                    <div className="flex items-center gap-2">
+                        <Car size={18} className="text-slate-400" />
+                        <input
+                            type="number"
+                            className="flex-1 p-2 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                            placeholder="Minutos"
+                            value={formData.commuteTime || ''}
+                            onChange={(e) => updateField('commuteTime', Number(e.target.value))}
+                        />
+                        <span className="text-sm text-slate-500">min</span>
+                    </div>
+                  </div>
+              )}
+
               <div className="flex gap-4 mt-6">
                 <button onClick={handlePrev} className="flex-1 py-3 text-slate-600 font-medium">Voltar</button>
                 <button
@@ -297,3 +398,4 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, isLoading }) => {
 };
 
 export default Onboarding;
+
